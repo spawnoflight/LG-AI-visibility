@@ -1,0 +1,1988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snowflake World Tour | Event Intelligence Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --snowflake-blue: #29B5E8;
+            --snowflake-blue-dark: #1A9FD1;
+            --snowflake-blue-light: #E8F7FC;
+            --snowflake-navy: #0D1B2A;
+            --snowflake-gray: #6E7F8D;
+            --live-vermilion: #d7414f;
+            --success: #10B981;
+            --success-light: #D1FAE5;
+            --warning: #F59E0B;
+            --warning-light: #FEF3C7;
+            --bg-light: #F8FAFC;
+            --bg-white: #FFFFFF;
+            --text-dark: #0D1B2A;
+            --text-muted: #6E7F8D;
+            --border-subtle: #E2E8F0;
+            --eco-green: #059669;
+            --eco-green-light: #D1FAE5;
+            --dna-purple: #7C3AED;
+            --dna-purple-light: #EDE9FE;
+            --dna-purple-dark: #5B21B6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-light);
+            color: var(--text-dark);
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        /* Header Bar */
+        .header-bar {
+            background: var(--snowflake-navy);
+            padding: 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-bar-inner {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 16px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand-group {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .snowflake-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: white;
+        }
+
+        .snowflake-logo svg {
+            width: 128px;
+        }
+        
+        .snowflake-logo span {
+            font-weight: 700;
+            font-size: 20px;
+            letter-spacing: -0.5px;
+        }
+
+        .powered-by {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-left: 24px;
+            border-left: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .powered-by span {
+            color: rgba(255,255,255,0.6);
+            font-size: 12px;
+        }
+
+        .powered-by strong {
+            color: white;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .live-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(16, 185, 129, 0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .live-status span {
+            color: var(--success);
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Main Container */
+        .dashboard {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 32px 40px 60px;
+        }
+
+        /* Event Header */
+        .event-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 32px;
+        }
+
+        .event-info h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 4px;
+        }
+
+        .event-info .event-meta {
+            color: var(--text-muted);
+            font-size: 15px;
+        }
+
+        .report-meta {
+            text-align: right;
+        }
+
+        .report-meta .label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .report-meta .value {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        /* Key Metrics Banner */
+        .metrics-banner {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .metric-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .metric-card.highlight {
+            background: linear-gradient(135deg, var(--snowflake-blue) 0%, var(--snowflake-blue-dark) 100%);
+            border: none;
+            color: white;
+        }
+
+        .metric-card.eco {
+            background: linear-gradient(135deg, var(--eco-green) 0%, #047857 100%);
+            border: none;
+            color: white;
+        }
+
+        .metric-card.dna {
+            background: linear-gradient(135deg, var(--dna-purple) 0%, var(--dna-purple-dark) 100%);
+            border: none;
+            color: white;
+        }
+
+        .metric-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .metric-card.highlight .metric-label,
+        .metric-card.eco .metric-label,
+        .metric-card.dna .metric-label {
+            color: rgba(255,255,255,0.8);
+        }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-dark);
+            line-height: 1.1;
+        }
+
+        .metric-card.highlight .metric-value,
+        .metric-card.eco .metric-value,
+        .metric-card.dna .metric-value {
+            color: white;
+        }
+
+        .metric-change {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .metric-change.positive {
+            color: var(--success);
+        }
+
+        .metric-change.negative {
+            color: var(--live-vermilion);
+        }
+
+        .metric-card.highlight .metric-change,
+        .metric-card.eco .metric-change,
+        .metric-card.dna .metric-change {
+            color: rgba(255,255,255,0.9);
+        }
+
+        /* Section Grid */
+        .section-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .section-grid.three-col {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .section-grid.four-col {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        .section-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .section-card.full-width {
+            grid-column: span 2;
+        }
+
+        .section-card.eco-card {
+            border: 2px solid var(--eco-green);
+            background: linear-gradient(180deg, var(--eco-green-light) 0%, white 100%);
+        }
+
+        .section-card.dna-card {
+            border: 2px solid var(--dna-purple);
+            background: linear-gradient(180deg, var(--dna-purple-light) 0%, white 100%);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .section-badge {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 12px;
+            background: var(--snowflake-blue-light);
+            color: var(--snowflake-blue-dark);
+        }
+
+        .section-badge.eco {
+            background: var(--eco-green-light);
+            color: var(--eco-green);
+        }
+
+        .section-badge.dna {
+            background: var(--dna-purple-light);
+            color: var(--dna-purple);
+        }
+
+        /* Chart Container */
+        .chart-container {
+            position: relative;
+            height: 280px;
+        }
+
+        .chart-container.small {
+            height: 200px;
+        }
+
+        /* Data Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th {
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .data-table td {
+            padding: 14px 0;
+            font-size: 14px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .data-table .name {
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+
+        .data-table .value {
+            font-weight: 600;
+            color: var(--snowflake-blue-dark);
+        }
+
+        .data-table .value.eco {
+            color: var(--eco-green);
+        }
+
+        .data-table .value.dna {
+            color: var(--dna-purple);
+        }
+
+        /* Progress Bars */
+        .progress-bar {
+            height: 8px;
+            background: var(--bg-light);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            background: var(--snowflake-blue);
+            transition: width 0.5s ease;
+        }
+
+        .progress-fill.success {
+            background: var(--success);
+        }
+
+        .progress-fill.eco {
+            background: var(--eco-green);
+        }
+
+        .progress-fill.dna {
+            background: var(--dna-purple);
+        }
+
+        .progress-fill.warning {
+            background: var(--warning);
+        }
+
+        /* Flow Timeline */
+        .flow-timeline {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .flow-hour {
+            text-align: center;
+            flex: 1;
+        }
+
+        .flow-bar {
+            height: 60px;
+            background: var(--bg-light);
+            border-radius: 6px;
+            margin: 0 4px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .flow-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, var(--snowflake-blue), var(--snowflake-blue-light));
+            border-radius: 6px;
+            transition: height 0.5s ease;
+        }
+
+        .flow-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+
+        .flow-value {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        /* Insights Panel */
+        .insights-panel {
+            background: linear-gradient(135deg, var(--snowflake-navy) 0%, #1B3A4B 100%);
+            border-radius: 12px;
+            padding: 28px;
+            color: white;
+        }
+
+        .insights-panel.eco {
+            background: linear-gradient(135deg, #064E3B 0%, #047857 100%);
+        }
+
+        .insights-panel.dna {
+            background: linear-gradient(135deg, var(--dna-purple-dark) 0%, var(--dna-purple) 100%);
+        }
+
+        .insights-panel h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .insight-item {
+            display: flex;
+            gap: 12px;
+            padding: 14px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .insight-item:last-child {
+            border-bottom: none;
+        }
+
+        .insight-icon {
+            width: 32px;
+            height: 32px;
+            background: rgba(41, 181, 232, 0.2);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .insights-panel.eco .insight-icon {
+            background: rgba(16, 185, 129, 0.2);
+        }
+
+        .insights-panel.dna .insight-icon {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .insight-icon svg {
+            width: 16px;
+            height: 16px;
+            color: var(--snowflake-blue);
+        }
+
+        .insights-panel.eco .insight-icon svg {
+            color: var(--success);
+        }
+
+        .insights-panel.dna .insight-icon svg {
+            color: white;
+        }
+
+        .insight-content {
+            flex: 1;
+        }
+
+        .insight-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+
+        .insight-detail {
+            font-size: 13px;
+            color: rgba(255,255,255,0.7);
+        }
+
+        /* NPS Gauge */
+        .nps-display {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .nps-score {
+            font-size: 64px;
+            font-weight: 700;
+            color: var(--success);
+            line-height: 1;
+        }
+
+        .nps-label {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+
+        .nps-breakdown {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .nps-segment {
+            text-align: center;
+        }
+
+        .nps-segment .value {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .nps-segment .label {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .nps-segment.promoters .value {
+            color: var(--success);
+        }
+
+        .nps-segment.passives .value {
+            color: var(--warning);
+        }
+
+        .nps-segment.detractors .value {
+            color: var(--live-vermilion);
+        }
+
+        /* Section Headers */
+        .section-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            margin-top: 40px;
+            padding-top: 32px;
+            border-top: 2px solid var(--snowflake-blue);
+        }
+
+        .section-divider.dna {
+            border-top-color: var(--dna-purple);
+        }
+
+        .section-divider.eco {
+            border-top-color: var(--eco-green);
+        }
+
+        .section-divider h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--snowflake-blue);
+        }
+
+        .section-divider.dna h2 {
+            color: var(--dna-purple);
+        }
+
+        .section-divider.eco h2 {
+            color: var(--eco-green);
+        }
+
+        .section-divider .badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--snowflake-blue-light);
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--snowflake-blue-dark);
+        }
+
+        .section-divider.dna .badge {
+            background: var(--dna-purple-light);
+            color: var(--dna-purple);
+        }
+
+        .section-divider.eco .badge {
+            background: var(--eco-green-light);
+            color: var(--eco-green);
+        }
+
+        /* Stat Grid */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border-subtle);
+            text-align: center;
+        }
+
+        .stat-card.dna {
+            border-color: var(--dna-purple);
+        }
+
+        .stat-card.eco {
+            border-color: var(--eco-green);
+        }
+
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--snowflake-blue);
+        }
+
+        .stat-card.dna .value {
+            color: var(--dna-purple);
+        }
+
+        .stat-card.eco .value {
+            color: var(--eco-green);
+        }
+
+        .stat-card .label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .stat-card .change {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--success);
+            margin-top: 6px;
+        }
+
+        /* Persona Cards */
+        .persona-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        .persona-card {
+            background: var(--bg-light);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .persona-card:hover {
+            border-color: var(--dna-purple);
+        }
+
+        .persona-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--dna-purple-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+        }
+
+        .persona-icon svg {
+            width: 24px;
+            height: 24px;
+            color: var(--dna-purple);
+        }
+
+        .persona-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 4px;
+        }
+
+        .persona-count {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--dna-purple);
+        }
+
+        .persona-percent {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Footer */
+        .dashboard-footer {
+            margin-top: 40px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border-subtle);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .footer-branding {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        .footer-branding strong {
+            color: var(--text-dark);
+        }
+
+        .footer-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary {
+            background: var(--bg-light);
+            color: var(--text-dark);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-subtle);
+        }
+
+        .btn-primary {
+            background: var(--snowflake-blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--snowflake-blue-dark);
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .metrics-banner {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .section-grid {
+                grid-template-columns: 1fr;
+            }
+            .section-card.full-width {
+                grid-column: span 1;
+            }
+            .stat-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .persona-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                padding: 20px;
+            }
+            .metrics-banner {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .stat-grid {
+                grid-template-columns: 1fr;
+            }
+            .persona-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header Bar -->
+    <div class="header-bar">
+        <div class="header-bar-inner">
+            <div class="brand-group">
+                <div class="snowflake-logo" style="">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 143 32" aria-label="Snowflake logo" class="logo-img" data-testid="snowflake-clickable-logo" role="img"><path fill-rule="evenodd" d="M140.304 9.45h-.375v.455h.375c.175 0 .287-.078.287-.223 0-.154-.105-.232-.287-.232Zm-.837-.422h.847c.461 0 .767.249.767.638a.606.606 0 0 1-.306.534l.331.474v.094h-.48l-.322-.456h-.375v.456h-.462v-1.74Zm2.362.902c0-.93-.627-1.635-1.588-1.635-.942 0-1.569.671-1.569 1.635 0 .92.627 1.636 1.569 1.636.961 0 1.588-.706 1.588-1.636Zm.394 0c0 1.093-.741 2.007-1.979 2.007-1.229 0-1.963-.92-1.963-2.007 0-1.092.732-2.006 1.963-2.006 1.238.002 1.979.913 1.979 2.006ZM31.267 13.821l-3.822 2.181 3.822 2.175a1.973 1.973 0 0 1 .736 2.717 2.03 2.03 0 0 1-2.748.725l-6.845-3.9a1.967 1.967 0 0 1-.914-1.135 1.918 1.918 0 0 1-.091-.646c.005-.157.028-.313.07-.47.137-.485.457-.92.932-1.194l6.843-3.895a2.026 2.026 0 0 1 2.749.73c.561.95.233 2.162-.732 2.712ZM27.648 24.39l-6.84-3.893a2.001 2.001 0 0 0-1.166-.26 1.994 1.994 0 0 0-1.862 1.98v7.796c0 1.1.897 1.988 2.012 1.988 1.114 0 2.014-.89 2.014-1.988v-4.36l3.83 2.181a2.022 2.022 0 0 0 2.749-.725c.555-.95.228-2.17-.737-2.72Zm-7.894-7.625-2.844 2.802a.566.566 0 0 1-.357.15h-.835a.577.577 0 0 1-.356-.15l-2.844-2.802a.558.558 0 0 1-.147-.35v-.826a.57.57 0 0 1 .147-.354l2.842-2.803a.575.575 0 0 1 .356-.147h.837a.57.57 0 0 1 .357.147l2.844 2.803a.57.57 0 0 1 .147.354v.826c0 .11-.065.27-.147.35Zm-2.273-.778a.587.587 0 0 0-.151-.354l-.823-.81a.582.582 0 0 0-.357-.147h-.033a.576.576 0 0 0-.354.147l-.823.81a.578.578 0 0 0-.144.354v.032c0 .113.063.27.144.35l.823.812c.082.08.24.148.354.148h.033a.587.587 0 0 0 .357-.148l.823-.812a.569.569 0 0 0 .151-.35v-.032ZM4.624 7.606l6.842 3.898c.369.21.777.292 1.168.26a2 2 0 0 0 1.863-1.983V1.986C14.497.89 13.595 0 12.485 0c-1.114 0-2.014.89-2.014 1.986v4.362L6.638 4.162a2.026 2.026 0 0 0-2.749.727 1.974 1.974 0 0 0 .735 2.718Zm15.018 4.158c.392.032.8-.05 1.166-.26l6.84-3.897a1.977 1.977 0 0 0 .737-2.718 2.027 2.027 0 0 0-2.749-.727l-3.83 2.186V1.986C21.806.89 20.906 0 19.792 0c-1.115 0-2.012.89-2.012 1.986V9.78c-.003 1.047.818 1.907 1.862 1.983Zm-7.008 8.472a2.001 2.001 0 0 0-1.168.26l-6.842 3.893a1.98 1.98 0 0 0-.737 2.72 2.027 2.027 0 0 0 2.749.724l3.833-2.181v4.36c0 1.1.9 1.988 2.014 1.988 1.11 0 2.012-.89 2.012-1.988v-7.795a1.992 1.992 0 0 0-1.86-1.981Zm-1.855-3.652a1.98 1.98 0 0 0 .09-.646 1.984 1.984 0 0 0-1.01-1.664L3.023 10.38c-.965-.548-2.196-.223-2.749.73-.559.95-.228 2.162.737 2.712l3.821 2.181-3.823 2.175a1.973 1.973 0 0 0-.737 2.717 2.028 2.028 0 0 0 2.749.725l6.838-3.9c.464-.26.776-.672.92-1.135ZM95.647 4.935h-.189c-.025 0-.049.003-.074.005-.024-.002-.047-.005-.073-.005-.485 0-.958.056-1.399.2a2.53 2.53 0 0 0-1.144.737l-.002-.003v.005c-.322.352-.532.773-.663 1.252-.128.48-.181 1.021-.186 1.638v1.192h-1.331a.823.823 0 0 0-.83.81.878.878 0 0 0 .242.614.909.909 0 0 0 .597.27h1.322v9.695l-.002.023c0 .228.095.437.251.587.154.147.371.234.606.234a.823.823 0 0 0 .819-.823v-9.721h1.431a.896.896 0 0 0 .595-.263.85.85 0 0 0 .251-.605v-.032c-.004-.437-.375-.794-.836-.794H93.59V8.764c.01-.525.065-.918.144-1.203.077-.288.184-.468.278-.58a.954.954 0 0 1 .41-.249c.198-.064.473-.103.844-.103h.044c.021 0 .045-.005.066-.005.025 0 .05.005.077.005h.187c.475 0 .857-.38.857-.847a.84.84 0 0 0-.85-.847Zm29.515 6.288a.841.841 0 0 0 .259-.598.788.788 0 0 0-.261-.58h.002c-.002-.004-.005-.004-.005-.004 0-.005-.004-.005-.004-.005h-.003a.836.836 0 0 0-.587-.244.85.85 0 0 0-.592.249l-6.589 6.336V5.73c0-.458-.389-.833-.867-.833a.833.833 0 0 0-.592.246.84.84 0 0 0-.25.587v15.59a.83.83 0 0 0 .25.585.853.853 0 0 0 .592.246c.478 0 .867-.37.867-.828v-2.575l2.145-2.114 4.374 5.207c.081.12.193.202.305.246.126.046.25.064.359.064a.889.889 0 0 0 .55-.177l.01-.007.011-.011a.886.886 0 0 0 .276-.629.86.86 0 0 0-.208-.552v-.002l-4.453-5.34 4.406-4.206h.005v-.003Zm-11.897-1.072c.156.15.252.364.252.596V21.32a.827.827 0 0 1-.247.584.858.858 0 0 1-.595.246.856.856 0 0 1-.594-.246.817.817 0 0 1-.25-.584v-1.031c-1.06 1.13-2.55 1.861-4.198 1.861a5.734 5.734 0 0 1-4.176-1.81 6.22 6.22 0 0 1-1.711-4.305c0-1.669.65-3.199 1.711-4.308a5.738 5.738 0 0 1 4.176-1.806c1.648 0 3.138.709 4.198 1.834v-1.006a.826.826 0 0 1 .844-.828c.224 0 .436.085.59.23Zm-1.434 5.884c0-1.25-.478-2.37-1.242-3.18-.763-.806-1.812-1.296-2.956-1.298-1.136 0-2.18.492-2.952 1.298a4.615 4.615 0 0 0-1.25 3.18c0 1.249.485 2.36 1.25 3.163.767.803 1.814 1.286 2.952 1.286a4.067 4.067 0 0 0 2.958-1.284 4.578 4.578 0 0 0 1.24-3.165Zm-67.814-.297c-.681-.318-1.453-.55-2.222-.803-.709-.237-1.427-.437-1.94-.702-.258-.136-.459-.28-.59-.442a.82.82 0 0 1-.2-.55c.002-.306.09-.552.242-.773.231-.326.618-.582 1.04-.745.417-.166.87-.244 1.194-.244.956.002 1.56.315 2.024.642.228.163.422.331.606.467.093.071.181.136.284.184.096.046.21.085.334.085.079 0 .156-.014.228-.044a.724.724 0 0 0 .205-.126.722.722 0 0 0 .152-.203.626.626 0 0 0 .049-.239.882.882 0 0 0-.117-.416c-.128-.228-.324-.447-.573-.668a5.576 5.576 0 0 0-1.388-.87c-.529-.234-1.095-.393-1.634-.393-1.252 0-2.296.28-3.054.796-.396.27-.744.564-.988.971-.25.408-.39.911-.408 1.567v.088c-.003.635.205 1.16.531 1.571.494.619 1.229.987 1.95 1.25.717.262 1.438.418 1.89.568.639.209 1.317.437 1.814.738.247.154.445.32.58.502.13.186.205.38.21.623v.019c-.002.354-.107.63-.282.867-.264.355-.7.612-1.163.778a4.1 4.1 0 0 1-1.252.228c-1.092 0-1.821-.26-2.353-.52-.266-.131-.48-.26-.676-.37a2.29 2.29 0 0 0-.282-.139.809.809 0 0 0-.303-.062.585.585 0 0 0-.212.04.628.628 0 0 0-.187.119.87.87 0 0 0-.182.24.64.64 0 0 0-.065.284c0 .164.06.311.15.447.137.195.34.368.591.543.262.172.572.34.928.508.795.37 1.812.564 2.586.575h.002c1.203 0 2.24-.273 3.115-.908v-.003h.002c.856-.635 1.387-1.58 1.387-2.648 0-.587-.14-1.084-.382-1.49-.368-.615-.965-1.022-1.641-1.342ZM99.123 4.896a.84.84 0 0 0-.594.246.829.829 0 0 0-.25.587v15.59a.81.81 0 0 0 .25.585.86.86 0 0 0 .594.246c.478 0 .865-.37.867-.828V5.729c-.002-.46-.387-.833-.867-.833Zm38.792 10.745v.083c0 .23-.105.437-.264.573a.882.882 0 0 1-.583.212h-9.456c.24 2.277 2.085 3.96 4.283 3.975h.557c.728.003 1.436-.246 2.061-.655a5.096 5.096 0 0 0 1.546-1.602.781.781 0 0 1 .312-.297.855.855 0 0 1 .823.016l.01.005.009.007a.891.891 0 0 1 .385.72c0 .147-.04.295-.119.43l-.003.005-.002.002a7.054 7.054 0 0 1-2.105 2.133c-.858.55-1.851.897-2.917.897h-.566a5.973 5.973 0 0 1-4.241-1.81 6.105 6.105 0 0 1-1.744-4.282c0-1.694.669-3.228 1.758-4.34a5.967 5.967 0 0 1 4.273-1.796c1.597 0 3.033.628 4.097 1.654 1.063 1.026 1.757 2.453 1.881 4.056l.005.014Zm-1.847-.787c-.48-1.919-2.187-3.285-4.136-3.283-1.998 0-3.681 1.337-4.203 3.283h8.339ZM53.002 9.942a5.11 5.11 0 0 0-3.423 1.318v-.483a.835.835 0 0 0-.233-.582.816.816 0 0 0-.585-.25.84.84 0 0 0-.606.248.835.835 0 0 0-.238.584V21.57l.035.035.003.004a.46.46 0 0 0 .055.113c.115.2.303.352.537.419l.032.01h.182a.864.864 0 0 0 .36-.08.73.73 0 0 0 .258-.213h.002c.01-.01.012-.02.021-.03a.803.803 0 0 0 .114-.18c.024-.064.04-.126.052-.172l.007-.03v-6.481a3.44 3.44 0 0 1 1.03-2.375 3.386 3.386 0 0 1 2.392-.985c.949 0 1.795.378 2.409.985.615.608.988 1.443.988 2.365v6.365c0 .232.1.448.252.595a.864.864 0 0 0 1.182 0 .82.82 0 0 0 .252-.595v-6.365c.007-2.745-2.267-5.008-5.078-5.013Zm16.758 1.792a6.226 6.226 0 0 1 1.713 4.3 6.236 6.236 0 0 1-1.713 4.299c-1.056 1.113-2.532 1.815-4.174 1.815-1.627 0-3.105-.704-4.166-1.816a6.24 6.24 0 0 1 0-8.598c1.061-1.111 2.54-1.815 4.166-1.815 1.642.002 3.118.704 4.174 1.815Zm.023 4.3c0-1.237-.483-2.36-1.25-3.17-.771-.812-1.813-1.307-2.949-1.307-1.133 0-2.18.497-2.949 1.307a4.608 4.608 0 0 0-1.25 3.17 4.56 4.56 0 0 0 1.25 3.155c.77.808 1.816 1.295 2.95 1.295 1.132 0 2.181-.488 2.948-1.295a4.56 4.56 0 0 0 1.25-3.154Zm18.194-6.02-.005-.003-.004-.002a.78.78 0 0 0-.303-.065.9.9 0 0 0-.462.136.844.844 0 0 0-.329.377v.005l-3.22 8.692-2.48-5.825-.005-.003a.845.845 0 0 0-.335-.377.883.883 0 0 0-.947.002.845.845 0 0 0-.331.375l-.002.003-2.486 5.83-3.233-8.69h-.002a.746.746 0 0 0-.308-.387.905.905 0 0 0-.469-.138.806.806 0 0 0-.317.065h-.005l-.004.004a.84.84 0 0 0-.487.762c0 .101.02.202.06.303l3.98 10.547v.005a.79.79 0 0 0 .14.233.602.602 0 0 0 .186.138c.014.011.033.03.066.048a.33.33 0 0 0 .118.041c.07.023.166.058.292.058.16 0 .31-.058.445-.143a.772.772 0 0 0 .299-.366l.009-.007 2.518-5.938 2.52 5.913h.002c.058.159.161.28.278.368.125.092.265.15.412.173h.105c.1 0 .198-.019.28-.05a.85.85 0 0 0 .214-.12.958.958 0 0 0 .306-.399v-.004l3.954-10.501a.816.816 0 0 0-.45-1.06Z" clip-rule="evenodd"></path></svg></div>
+                <div class="powered-by">
+                    <span>Insights by</span>
+                    <strong>Live Group</strong>
+                </div>
+            </div>
+            <div class="live-status">
+                <div class="live-dot"></div>
+                <span>Live Data</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="dashboard">
+        <!-- Event Header -->
+        <div class="event-header">
+            <div class="event-info">
+                <h1>Snowflake Demo Event</h1>
+                <div class="event-meta">Marina Bay Sands Expo • 14 March 2026 • 3,247 Registered</div>
+            </div>
+            <div class="report-meta">
+                <div class="label">Report Generated</div>
+                <div class="value">14 Mar 2026, 17:45 SGT</div>
+            </div>
+        </div>
+
+        <!-- Key Metrics Banner -->
+        <div class="metrics-banner">
+            <div class="metric-card highlight">
+                <div class="metric-label">Total Attendance</div>
+                <div class="metric-value">2,891</div>
+                <div class="metric-change positive">89% of registrations</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Session Attendance</div>
+                <div class="metric-value">94%</div>
+                <div class="metric-change positive">↑ 6% vs tour avg</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Expo Engagement</div>
+                <div class="metric-value">78%</div>
+                <div class="metric-change positive">↑ 12% vs tour avg</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Avg Dwell Time</div>
+                <div class="metric-value">4.2h</div>
+                <div class="metric-change positive">↑ 23 mins vs target</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Partner Leads</div>
+                <div class="metric-value">1,847</div>
+                <div class="metric-change positive">↑ 18% vs tour avg</div>
+            </div>
+        </div>
+
+        <!-- Registration Flow & Check-in -->
+        <div class="section-grid">
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">Check-in Flow</div>
+                    <div class="section-badge">12 Stations Active</div>
+                </div>
+                <div class="flow-timeline">
+                    <div class="flow-hour">
+                        <div class="flow-bar">
+                            <div class="flow-fill" style="height: 25%;"></div>
+                        </div>
+                        <div class="flow-label">07:00</div>
+                        <div class="flow-value">156</div>
+                    </div>
+                    <div class="flow-hour">
+                        <div class="flow-bar">
+                            <div class="flow-fill" style="height: 85%;"></div>
+                        </div>
+                        <div class="flow-label">08:00</div>
+                        <div class="flow-value">892</div>
+                    </div>
+                    <div class="flow-hour">
+                        <div class="flow-bar">
+                            <div class="flow-fill" style="height: 100%;"></div>
+                        </div>
+                        <div class="flow-label">09:00</div>
+                        <div class="flow-value">1,024</div>
+                    </div>
+                    <div class="flow-hour">
+                        <div class="flow-bar">
+                            <div class="flow-fill" style="height: 45%;"></div>
+                        </div>
+                        <div class="flow-label">10:00</div>
+                        <div class="flow-value">412</div>
+                    </div>
+                    <div class="flow-hour">
+                        <div class="flow-bar">
+                            <div class="flow-fill" style="height: 30%;"></div>
+                        </div>
+                        <div class="flow-label">11:00</div>
+                        <div class="flow-value">267</div>
+                    </div>
+                    <div class="flow-hour">
+                        <div class="flow-bar">
+                            <div class="flow-fill" style="height: 15%;"></div>
+                        </div>
+                        <div class="flow-label">12:00+</div>
+                        <div class="flow-value">140</div>
+                    </div>
+                </div>
+                <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-subtle);">
+                    <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                        <span style="color: var(--text-muted);">Peak throughput</span>
+                        <span style="font-weight: 600;">342 check-ins / 15 mins (08:45)</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 13px; margin-top: 8px;">
+                        <span style="color: var(--text-muted);">Avg wait time</span>
+                        <span style="font-weight: 600; color: var(--success);">47 seconds</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">Session Popularity</div>
+                    <div class="section-badge">6 Tracks</div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="sessionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expo & Partner Performance -->
+        <div class="section-grid">
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">Expo Hall Traffic</div>
+                    <div class="section-badge">50 Booths</div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="expoChart"></canvas>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">Top Partner Booths</div>
+                    <div class="section-badge">By Lead Capture</div>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Partner</th>
+                            <th>Visitors</th>
+                            <th>Dwell</th>
+                            <th>Leads</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="name">AWS</td>
+                            <td>847</td>
+                            <td>4.2m</td>
+                            <td class="value">312</td>
+                        </tr>
+                        <tr>
+                            <td class="name">Microsoft Azure</td>
+                            <td>792</td>
+                            <td>3.8m</td>
+                            <td class="value">287</td>
+                        </tr>
+                        <tr>
+                            <td class="name">Tableau</td>
+                            <td>684</td>
+                            <td>5.1m</td>
+                            <td class="value">245</td>
+                        </tr>
+                        <tr>
+                            <td class="name">dbt Labs</td>
+                            <td>521</td>
+                            <td>6.2m</td>
+                            <td class="value">198</td>
+                        </tr>
+                        <tr>
+                            <td class="name">Fivetran</td>
+                            <td>489</td>
+                            <td>4.5m</td>
+                            <td class="value">176</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Snowflake Village & Snowstore & NPS -->
+        <div class="section-grid three-col">
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">Snowflake Village</div>
+                </div>
+                <div style="text-align: center; padding: 20px 0;">
+                    <div style="font-size: 48px; font-weight: 700; color: var(--snowflake-blue);">1,642</div>
+                    <div style="font-size: 14px; color: var(--text-muted); margin-top: 4px;">Demo Interactions</div>
+                </div>
+                <div style="border-top: 1px solid var(--border-subtle); padding-top: 16px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
+                        <span style="color: var(--text-muted);">Cortex AI Demo</span>
+                        <span style="font-weight: 600;">487</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
+                        <span style="color: var(--text-muted);">Snowpark Container</span>
+                        <span style="font-weight: 600;">412</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
+                        <span style="color: var(--text-muted);">Data Sharing</span>
+                        <span style="font-weight: 600;">389</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                        <span style="color: var(--text-muted);">Marketplace</span>
+                        <span style="font-weight: 600;">354</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">Snowstore</div>
+                </div>
+                <div style="text-align: center; padding: 20px 0;">
+                    <div style="font-size: 48px; font-weight: 700; color: var(--snowflake-blue);">2,156</div>
+                    <div style="font-size: 14px; color: var(--text-muted); margin-top: 4px;">Items Redeemed</div>
+                </div>
+                <div style="border-top: 1px solid var(--border-subtle); padding-top: 16px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
+                        <span style="color: var(--text-muted);">Hydro Flask</span>
+                        <span style="font-weight: 600;">892 / 1,000</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill warning" style="width: 89%;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 13px; margin-top: 12px; margin-bottom: 8px;">
+                        <span style="color: var(--text-muted);">T-Shirts</span>
+                        <span style="font-weight: 600;">645 / 800</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 81%;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 13px; margin-top: 12px; margin-bottom: 8px;">
+                        <span style="color: var(--text-muted);">Sticker Packs</span>
+                        <span style="font-weight: 600;">619 / 1,500</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill success" style="width: 41%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">Net Promoter Score</div>
+                </div>
+                <div class="nps-display">
+                    <div class="nps-score">+72</div>
+                    <div class="nps-label">Excellent</div>
+                    <div class="nps-breakdown">
+                        <div class="nps-segment promoters">
+                            <div class="value">81%</div>
+                            <div class="label">Promoters</div>
+                        </div>
+                        <div class="nps-segment passives">
+                            <div class="value">10%</div>
+                            <div class="label">Passives</div>
+                        </div>
+                        <div class="nps-segment detractors">
+                            <div class="value">9%</div>
+                            <div class="label">Detractors</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Engagement & Insights -->
+        <div class="section-grid">
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">Live Engagement</div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="engagementChart"></canvas>
+                </div>
+            </div>
+
+            <div class="section-card insights-panel">
+                <h3>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                    </svg>
+                    Key Insights
+                </h3>
+                <div class="insight-item">
+                    <div class="insight-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                        </svg>
+                    </div>
+                    <div class="insight-content">
+                        <div class="insight-title">Cortex AI sessions over capacity</div>
+                        <div class="insight-detail">All three Cortex AI sessions hit 100% capacity within 15 minutes. Consider adding a fourth track for future events.</div>
+                    </div>
+                </div>
+                <div class="insight-item">
+                    <div class="insight-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                    </div>
+                    <div class="insight-content">
+                        <div class="insight-title">Post-lunch engagement spike</div>
+                        <div class="insight-detail">Expo traffic increased 34% between 14:00-15:00 vs morning. Optimal time for partner activations.</div>
+                    </div>
+                </div>
+                <div class="insight-item">
+                    <div class="insight-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                    </div>
+                    <div class="insight-content">
+                        <div class="insight-title">High meeting conversion</div>
+                        <div class="insight-detail">247 scheduled 1:1 meetings held across 12 meeting rooms. 92% attendance rate.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== AUDIENCE DNA SECTION ==================== -->
+        <div class="section-divider dna">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2">
+                <path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07"/>
+            </svg>
+            <h2>AudienceDNA</h2>
+            <div class="badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                Audience Profiling
+            </div>
+        </div>
+
+        <!-- Audience DNA Key Metrics -->
+        <div class="stat-grid">
+            <div class="stat-card dna">
+                <div class="value">6</div>
+                <div class="label">Distinct Personas Identified</div>
+                <div class="change">Behavioural clustering</div>
+            </div>
+            <div class="stat-card dna">
+                <div class="value">73%</div>
+                <div class="label">Profile Match Rate</div>
+                <div class="change">↑ 8% vs Tokyo event</div>
+            </div>
+            <div class="stat-card dna">
+                <div class="value">847</div>
+                <div class="label">High-Intent Attendees</div>
+                <div class="change">29% of total attendance</div>
+            </div>
+            <div class="stat-card dna">
+                <div class="value">92%</div>
+                <div class="label">Data Capture Rate</div>
+                <div class="change">↑ 5% vs tour average</div>
+            </div>
+        </div>
+
+        <!-- Audience Personas -->
+        <div class="section-grid">
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">Audience Personas</div>
+                    <div class="section-badge dna">Behavioural Segments</div>
+                </div>
+                <div class="persona-grid">
+                    <div class="persona-card">
+                        <div class="persona-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/>
+                            </svg>
+                        </div>
+                        <div class="persona-name">The Architect</div>
+                        <div class="persona-count">812</div>
+                        <div class="persona-percent">28% of attendees</div>
+                    </div>
+                    <div class="persona-card">
+                        <div class="persona-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                            </svg>
+                        </div>
+                        <div class="persona-name">The Strategist</div>
+                        <div class="persona-count">636</div>
+                        <div class="persona-percent">22% of attendees</div>
+                    </div>
+                    <div class="persona-card">
+                        <div class="persona-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+                            </svg>
+                        </div>
+                        <div class="persona-name">The Builder</div>
+                        <div class="persona-count">549</div>
+                        <div class="persona-percent">19% of attendees</div>
+                    </div>
+                    <div class="persona-card">
+                        <div class="persona-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                            </svg>
+                        </div>
+                        <div class="persona-name">The Explorer</div>
+                        <div class="persona-count">894</div>
+                        <div class="persona-percent">31% of attendees</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">Role Distribution</div>
+                    <div class="section-badge dna">From Registration</div>
+                </div>
+                <div class="chart-container small">
+                    <canvas id="roleChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Preferences & Pipeline Indicators -->
+        <div class="section-grid">
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">Content Preferences by Persona</div>
+                    <div class="section-badge dna">Session Attendance</div>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Persona</th>
+                            <th>Top Content Track</th>
+                            <th>Avg Sessions</th>
+                            <th>Expo Dwell</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="name">The Architect</td>
+                            <td>Data Engineering</td>
+                            <td>4.2</td>
+                            <td class="value dna">6.1m</td>
+                        </tr>
+                        <tr>
+                            <td class="name">The Strategist</td>
+                            <td>AI & ML</td>
+                            <td>3.8</td>
+                            <td class="value dna">4.8m</td>
+                        </tr>
+                        <tr>
+                            <td class="name">The Builder</td>
+                            <td>Snowpark</td>
+                            <td>4.5</td>
+                            <td class="value dna">7.2m</td>
+                        </tr>
+                        <tr>
+                            <td class="name">The Explorer</td>
+                            <td>Customer Stories</td>
+                            <td>2.9</td>
+                            <td class="value dna">3.4m</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">Pipeline Indicators</div>
+                    <div class="section-badge dna">High-Intent Signals</div>
+                </div>
+                <div style="padding: 16px 0;">
+                    <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 12px;">
+                        <span style="color: var(--text-muted);">Requested sales follow-up</span>
+                        <span style="font-weight: 600; color: var(--dna-purple);">312 attendees</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill dna" style="width: 37%;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 13px; margin-top: 16px; margin-bottom: 12px;">
+                        <span style="color: var(--text-muted);">Booked demo post-event</span>
+                        <span style="font-weight: 600; color: var(--dna-purple);">187 attendees</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill dna" style="width: 22%;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 13px; margin-top: 16px; margin-bottom: 12px;">
+                        <span style="color: var(--text-muted);">Downloaded pricing info</span>
+                        <span style="font-weight: 600; color: var(--dna-purple);">421 attendees</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill dna" style="width: 49%;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 13px; margin-top: 16px; margin-bottom: 12px;">
+                        <span style="color: var(--text-muted);">Engaged 3+ partner booths</span>
+                        <span style="font-weight: 600; color: var(--dna-purple);">534 attendees</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill dna" style="width: 63%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audience Insights -->
+        <div class="section-grid">
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">Seniority Breakdown</div>
+                    <div class="section-badge dna">By Job Level</div>
+                </div>
+                <div class="chart-container small">
+                    <canvas id="seniorityChart"></canvas>
+                </div>
+            </div>
+
+            <div class="section-card insights-panel dna">
+                <h3>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                    Audience Insights
+                </h3>
+                <div class="insight-item">
+                    <div class="insight-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                        </svg>
+                    </div>
+                    <div class="insight-content">
+                        <div class="insight-title">Architects are your highest-value segment</div>
+                        <div class="insight-detail">Attended 4.2 sessions on average, spent 6.1 mins per booth, and 47% requested follow-up. Prioritise this persona for sales outreach.</div>
+                    </div>
+                </div>
+                <div class="insight-item">
+                    <div class="insight-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M8 12l2 2 4-4"/>
+                        </svg>
+                    </div>
+                    <div class="insight-content">
+                        <div class="insight-title">Director+ attendance up 23%</div>
+                        <div class="insight-detail">Senior audience growing faster than practitioner level. Consider adding executive track for Tokyo.</div>
+                    </div>
+                </div>
+                <div class="insight-item">
+                    <div class="insight-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                        </svg>
+                    </div>
+                    <div class="insight-content">
+                        <div class="insight-title">Explorers need nurturing</div>
+                        <div class="insight-detail">Lowest session attendance but high expo engagement. Recommend targeted post-event content sequence.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== SUSTAINABILITY SECTION ==================== -->
+        <div class="section-divider eco">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2">
+                <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
+                <path d="M12 6v6l4 2"/>
+            </svg>
+            <h2>Sustainability Metrics</h2>
+            <div class="badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+                Powered by Trace
+            </div>
+        </div>
+
+        <!-- Sustainability Key Metrics -->
+        <div class="stat-grid">
+            <div class="stat-card eco">
+                <div class="value">87%</div>
+                <div class="label">Waste Diverted from Landfill</div>
+                <div class="change">↑ 12% vs tour average</div>
+            </div>
+            <div class="stat-card eco">
+                <div class="value">94%</div>
+                <div class="label">Booth Materials Reused</div>
+                <div class="change">↑ 8% vs previous event</div>
+            </div>
+            <div class="stat-card eco">
+                <div class="value">2.4t</div>
+                <div class="label">CO₂e Emissions</div>
+                <div class="change">↓ 18% vs benchmark</div>
+            </div>
+            <div class="stat-card eco">
+                <div class="value">0</div>
+                <div class="label">Single-Use Plastics</div>
+                <div class="change">100% reusable serviceware</div>
+            </div>
+        </div>
+
+        <!-- Sustainability Details -->
+        <div class="section-grid">
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">Materials Breakdown</div>
+                    <div class="section-badge eco">ISO 20121 Compliant</div>
+                </div>
+                <div class="chart-container small">
+                    <canvas id="materialsChart"></canvas>
+                </div>
+                <table class="data-table" style="margin-top: 16px;">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Weight</th>
+                            <th>Outcome</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="name">Booth structures</td>
+                            <td>4,200 kg</td>
+                            <td class="value eco">100% reused</td>
+                        </tr>
+                        <tr>
+                            <td class="name">Signage & graphics</td>
+                            <td>340 kg</td>
+                            <td class="value eco">92% recycled</td>
+                        </tr>
+                        <tr>
+                            <td class="name">Packaging</td>
+                            <td>180 kg</td>
+                            <td class="value eco">Returned to supplier</td>
+                        </tr>
+                        <tr>
+                            <td class="name">General waste</td>
+                            <td>95 kg</td>
+                            <td style="font-weight: 600; color: var(--warning);">To landfill</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">Freight & Logistics</div>
+                    <div class="section-badge eco">Regional Hub: Singapore</div>
+                </div>
+                <div style="padding: 20px 0;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                        <div style="text-align: center; flex: 1;">
+                            <div style="font-size: 32px; font-weight: 700; color: var(--eco-green);">78%</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">Regional Sourcing</div>
+                        </div>
+                        <div style="text-align: center; flex: 1;">
+                            <div style="font-size: 32px; font-weight: 700; color: var(--eco-green);">1,240</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">Total Freight km</div>
+                        </div>
+                        <div style="text-align: center; flex: 1;">
+                            <div style="font-size: 32px; font-weight: 700; color: var(--eco-green);">0</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">Air Freight Items</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="border-top: 1px solid var(--border-subtle); padding-top: 16px;">
+                    <div style="font-size: 13px; font-weight: 600; margin-bottom: 12px;">Freight by Source</div>
+                    <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
+                        <span style="color: var(--text-muted);">Singapore hub (booths, AV)</span>
+                        <span style="font-weight: 600;">78%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill eco" style="width: 78%;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 13px; margin-top: 12px; margin-bottom: 8px;">
+                        <span style="color: var(--text-muted);">Regional (swag, signage)</span>
+                        <span style="font-weight: 600;">18%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill eco" style="width: 18%;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 13px; margin-top: 12px; margin-bottom: 8px;">
+                        <span style="color: var(--text-muted);">International (specialty items)</span>
+                        <span style="font-weight: 600;">4%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill warning" style="width: 4%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Swag & Food Waste -->
+        <div class="section-grid">
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">Swag Sustainability</div>
+                    <div class="section-badge eco">Zero Waste Target</div>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Distributed</th>
+                            <th>Remaining</th>
+                            <th>Plan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="name">Hydro Flask</td>
+                            <td>892</td>
+                            <td>108</td>
+                            <td class="value eco">→ Tokyo event</td>
+                        </tr>
+                        <tr>
+                            <td class="name">T-Shirts</td>
+                            <td>645</td>
+                            <td>155</td>
+                            <td class="value eco">→ Tokyo event</td>
+                        </tr>
+                        <tr>
+                            <td class="name">Sticker Packs</td>
+                            <td>619</td>
+                            <td>881</td>
+                            <td class="value eco">→ Regional stock</td>
+                        </tr>
+                        <tr>
+                            <td class="name">Tote Bags</td>
+                            <td>1,847</td>
+                            <td>53</td>
+                            <td class="value eco">→ Tokyo event</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div style="margin-top: 16px; padding: 12px; background: var(--eco-green-light); border-radius: 8px; font-size: 13px;">
+                    <strong style="color: var(--eco-green);">100% reusable items</strong> — All swag designed for long-term use.
+                </div>
+            </div>
+
+            <div class="section-card insights-panel eco">
+                <h3>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
+                        <path d="M12 6v6l4 2"/>
+                    </svg>
+                    Sustainability Insights
+                </h3>
+                <div class="insight-item">
+                    <div class="insight-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="22 4 12 14.01 9 11.01"/>
+                        </svg>
+                    </div>
+                    <div class="insight-content">
+                        <div class="insight-title">Regional hub strategy working</div>
+                        <div class="insight-detail">78% of materials sourced from Singapore hub reduced freight emissions by an estimated 1.2t CO₂e.</div>
+                    </div>
+                </div>
+                <div class="insight-item">
+                    <div class="insight-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M8 12l2 2 4-4"/>
+                        </svg>
+                    </div>
+                    <div class="insight-content">
+                        <div class="insight-title">Swag redistribution on track</div>
+                        <div class="insight-detail">All remaining inventory allocated to Tokyo event. Zero swag waste projected for Q1 2026.</div>
+                    </div>
+                </div>
+                <div class="insight-item">
+                    <div class="insight-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                        </svg>
+                    </div>
+                    <div class="insight-content">
+                        <div class="insight-title">Food donation partnership active</div>
+                        <div class="insight-detail">45kg surplus catering donated to Food Bank Singapore. Reusable serviceware confirmed throughout.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Year on Year Comparison -->
+        <div class="section-grid">
+            <div class="section-card full-width">
+                <div class="section-header">
+                    <div class="section-title">Programme Performance: Year-on-Year</div>
+                    <div class="section-badge">All Metrics</div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="dashboard-footer">
+            <div class="footer-branding">
+                Data captured and analysed by <strong>Live Group</strong> • Powered by <strong>Envoku</strong> + <strong>AudienceDNA</strong> + <strong>Trace</strong>
+            </div>
+            <div class="footer-actions">
+                <button class="btn btn-secondary">Export CSV</button>
+                <button class="btn btn-primary">Download Report</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chartColors = {
+            blue: '#29B5E8',
+            blueLight: 'rgba(41, 181, 232, 0.1)',
+            navy: '#0D1B2A',
+            success: '#10B981',
+            eco: '#059669',
+            ecoLight: 'rgba(5, 150, 105, 0.1)',
+            dna: '#7C3AED',
+            dnaLight: 'rgba(124, 58, 237, 0.1)',
+            warning: '#F59E0B',
+            vermilion: '#d7414f',
+            gray: '#6E7F8D'
+        };
+
+        // Session Popularity Chart
+        const sessionCtx = document.getElementById('sessionChart').getContext('2d');
+        new Chart(sessionCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Opening Keynote', 'AI & Agents', 'Snowpark Deep Dive', 'Data Mesh Panel', 'Customer Stories', 'Closing Keynote'],
+                datasets: [{
+                    label: 'Attendance',
+                    data: [2847, 398, 392, 378, 356, 2654],
+                    backgroundColor: chartColors.blue,
+                    borderRadius: 6
+                }, {
+                    label: 'Capacity',
+                    data: [3000, 400, 400, 400, 400, 3000],
+                    backgroundColor: 'rgba(41, 181, 232, 0.2)',
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { 
+                        position: 'bottom',
+                        labels: { padding: 20, font: { size: 12 } }
+                    }
+                },
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    x: { 
+                        grid: { display: false },
+                        ticks: { font: { size: 11 } }
+                    }
+                }
+            }
+        });
+
+        // Expo Traffic Chart
+        const expoCtx = document.getElementById('expoChart').getContext('2d');
+        new Chart(expoCtx, {
+            type: 'line',
+            data: {
+                labels: ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'],
+                datasets: [{
+                    label: 'Expo Traffic',
+                    data: [245, 687, 892, 534, 412, 978, 1124, 867, 423],
+                    borderColor: chartColors.blue,
+                    backgroundColor: chartColors.blueLight,
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { 
+                        position: 'bottom',
+                        labels: { padding: 20, font: { size: 12 } }
+                    }
+                },
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    x: { 
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+
+        // Engagement Chart
+        const engagementCtx = document.getElementById('engagementChart').getContext('2d');
+        new Chart(engagementCtx, {
+            type: 'bar',
+            data: {
+                labels: ['App Downloads', 'Session Check-ins', 'Poll Responses', 'Q&A Submissions', 'Meeting Bookings', 'Social Shares'],
+                datasets: [{
+                    label: 'Actual',
+                    data: [2456, 8934, 1847, 623, 247, 892],
+                    backgroundColor: chartColors.blue,
+                    borderRadius: 6
+                }, {
+                    label: 'Target',
+                    data: [2500, 8000, 1500, 500, 200, 750],
+                    backgroundColor: 'rgba(41, 181, 232, 0.2)',
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { 
+                        position: 'bottom',
+                        labels: { padding: 20, font: { size: 12 } }
+                    }
+                },
+                scales: {
+                    x: { 
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    y: { 
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+
+        // Role Distribution Chart
+        const roleCtx = document.getElementById('roleChart').getContext('2d');
+        new Chart(roleCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Data Engineer', 'Analytics', 'Architect', 'Developer', 'Executive', 'Other'],
+                datasets: [{
+                    data: [28, 22, 18, 15, 10, 7],
+                    backgroundColor: [
+                        chartColors.dna,
+                        '#8B5CF6',
+                        '#A78BFA',
+                        '#C4B5FD',
+                        '#DDD6FE',
+                        chartColors.gray
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { 
+                        position: 'right',
+                        labels: { 
+                            padding: 12, 
+                            font: { size: 11 },
+                            generateLabels: function(chart) {
+                                const data = chart.data;
+                                return data.labels.map((label, i) => ({
+                                    text: `${label} (${data.datasets[0].data[i]}%)`,
+                                    fillStyle: data.datasets[0].backgroundColor[i],
+                                    index: i
+                                }));
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Seniority Chart
+        const seniorityCtx = document.getElementById('seniorityChart').getContext('2d');
+        new Chart(seniorityCtx, {
+            type: 'bar',
+            data: {
+                labels: ['C-Level', 'VP/SVP', 'Director', 'Manager', 'Individual Contributor'],
+                datasets: [{
+                    label: 'Attendees',
+                    data: [87, 156, 412, 687, 1549],
+                    backgroundColor: chartColors.dna,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { 
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    y: { 
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+
+        // Materials Breakdown Chart
+        const materialsCtx = document.getElementById('materialsChart').getContext('2d');
+        new Chart(materialsCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Reused', 'Recycled', 'Returned to Supplier', 'Landfill'],
+                datasets: [{
+                    data: [72, 13, 8, 7],
+                    backgroundColor: [
+                        chartColors.eco,
+                        '#34D399',
+                        '#6EE7B7',
+                        chartColors.warning
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { 
+                        position: 'right',
+                        labels: { 
+                            padding: 12, 
+                            font: { size: 11 },
+                            generateLabels: function(chart) {
+                                const data = chart.data;
+                                return data.labels.map((label, i) => ({
+                                    text: `${label} (${data.datasets[0].data[i]}%)`,
+                                    fillStyle: data.datasets[0].backgroundColor[i],
+                                    index: i
+                                }));
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Year on Year Trend Chart
+        const trendCtx = document.getElementById('trendChart').getContext('2d');
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: ['Q1 2025', 'Q2 2025', 'Q3 2025', 'Q4 2025', 'Q1 2026'],
+                datasets: [{
+                    label: 'Attendance Rate',
+                    data: [82, 84, 86, 87, 89],
+                    borderColor: chartColors.blue,
+                    backgroundColor: chartColors.blueLight,
+                    tension: 0.4
+                }, {
+                    label: 'Engagement Score',
+                    data: [71, 74, 76, 77, 78],
+                    borderColor: chartColors.dna,
+                    backgroundColor: chartColors.dnaLight,
+                    tension: 0.4
+                }, {
+                    label: 'Sustainability Score',
+                    data: [72, 78, 82, 85, 87],
+                    borderColor: chartColors.eco,
+                    backgroundColor: chartColors.ecoLight,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { 
+                        position: 'bottom',
+                        labels: { padding: 20, font: { size: 12 } }
+                    }
+                },
+                scales: {
+                    y: { 
+                        beginAtZero: false,
+                        min: 60,
+                        max: 100,
+                        ticks: { callback: v => v + '%' },
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    x: { 
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
