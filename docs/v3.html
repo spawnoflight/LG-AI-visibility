@@ -510,18 +510,17 @@
 
 <script>
 // ─────────────────────────────────────────────
-// CONFIG — Google Sheets published CSV URLs
+// CONFIG — Google Apps Script Web App
 // ─────────────────────────────────────────────
-const BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTDleEbjq_HhTB3UxZc-Ef31p6PNPAzjBTciCR-vs_v5B1ef-5SEnqmQqitP0gnaqH0qonxAE17OTJH/pub';
-const PROXY = 'https://corsproxy.io/?url=';
+const API = 'https://script.google.com/macros/s/AKfycbyebqShyyJQfJfTykid8ikGrjI0U2GwIqAKov0cGPU03X-hwZxy1fM3Lu1Oc-a2WAvNTQ/exec';
 
 const SHEETS = {
-    traffic:   `${PROXY}${encodeURIComponent(BASE + '?gid=0&single=true&output=csv')}`,
-    topPages:  `${PROXY}${encodeURIComponent(BASE + '?gid=1503988619&single=true&output=csv')}`,
-    trend:     `${PROXY}${encodeURIComponent(BASE + '?gid=967206910&single=true&output=csv')}`,
-    brands:    `${PROXY}${encodeURIComponent(BASE + '?gid=375342493&single=true&output=csv')}`,
-    gsc:       `${PROXY}${encodeURIComponent(BASE + '?gid=547121453&single=true&output=csv')}`,
-    leads:     `${PROXY}${encodeURIComponent(BASE + '?gid=2126968477&single=true&output=csv')}`,
+    traffic:  `${API}?gid=0`,
+    topPages: `${API}?gid=1503988619`,
+    trend:    `${API}?gid=967206910`,
+    brands:   `${API}?gid=375342493`,
+    gsc:      `${API}?gid=547121453`,
+    leads:    `${API}?gid=2126968477`,
 };
 
 // ─────────────────────────────────────────────
@@ -540,29 +539,13 @@ function hexToRgba(hex, a) {
 }
 
 // ─────────────────────────────────────────────
-// CSV PARSER
+// DATA FETCHER — Apps Script returns JSON array
 // ─────────────────────────────────────────────
-function parseCSV(text) {
-    const lines = text.trim().split('\n');
-    return lines.map(line => {
-        const cols = [];
-        let cur = '', inQ = false;
-        for (let i = 0; i < line.length; i++) {
-            const ch = line[i];
-            if (ch === '"') { inQ = !inQ; }
-            else if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
-            else { cur += ch; }
-        }
-        cols.push(cur.trim());
-        return cols;
-    });
-}
-
 async function fetchCSV(url) {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const text = await res.text();
-    return parseCSV(text);
+    const data = await res.json();
+    return data; // already a 2D array of rows
 }
 
 // ─────────────────────────────────────────────
