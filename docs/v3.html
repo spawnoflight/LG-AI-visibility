@@ -261,7 +261,7 @@
 <!-- Loading Overlay -->
 <div id="loading-overlay">
     <div class="spinner"></div>
-    <p>Loading live data from Google Sheets…</p>
+    <p>Loading live data…</p>
 </div>
 
 <!-- Header -->
@@ -297,7 +297,7 @@
             <div class="sub">Live Group · AI Search & LLM Traffic Intelligence</div>
         </div>
         <div class="report-meta">
-            <div class="label">Report Generated</div>
+            <div class="label">Report last refreshed</div>
             <div class="value" id="report-date">—</div>
         </div>
     </div>
@@ -457,15 +457,41 @@
                 <div class="card-title">Top Brands in AI Answers</div>
                 <div class="card-badge">Competitor Mentions</div>
             </div>
-            <div id="brand-mentions-list" style="padding:8px 0;"></div>
+            <div id="brand-mentions-list" style="padding:8px 0;overflow-y:auto;max-height:320px;"></div>
         </div>
 
         <div class="card">
+            <div class="card-header">
+                <div class="card-title">Cited Sources</div>
+                <div class="card-badge">Domain Level</div>
+            </div>
+            <div id="cited-sources-list" style="padding:8px 0;overflow-y:auto;max-height:320px;"></div>
+        </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:0;">
+        <div class="card col-span-2" style="grid-column:span 1;">
             <div class="card-header">
                 <div class="card-title">LLM Lead Funnel</div>
                 <div class="card-badge">HubSpot Pipeline</div>
             </div>
             <div class="funnel-wrap" id="funnel-wrap"></div>
+        </div>
+        <div class="card" style="grid-column:span 1;">
+            <div class="card-header">
+                <div class="card-title">Pipeline Conversion Rate</div>
+                <div class="card-badge">HubSpot</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:16px;padding-top:8px;">
+                <div style="text-align:center;padding:20px;">
+                    <div style="font-size:48px;font-weight:700;color:var(--brand-red);" id="mql-rate">—</div>
+                    <div style="font-size:14px;color:var(--text-muted);margin-top:4px;">Lead → MQL Rate</div>
+                </div>
+                <div style="text-align:center;padding:20px;border-top:1px solid var(--border-subtle);">
+                    <div style="font-size:48px;font-weight:700;color:var(--success);" id="opp-rate">—</div>
+                    <div style="font-size:14px;color:var(--text-muted);margin-top:4px;">Lead → Opportunity Rate</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -552,7 +578,7 @@ async function fetchCSV(url) {
 // HELPERS
 // ─────────────────────────────────────────────
 function shortLabel(label, max=32) {
-    label = label.replace(/^\//, '').replace(/-/g,' ');
+    label = String(label).replace(/^\//, '').replace(/-/g,' ');
     return label.length > max ? label.slice(0, max) + '…' : label;
 }
 
@@ -561,13 +587,21 @@ function setEl(id, val) {
     if (el) el.textContent = val;
 }
 
+// Skip header rows: filter out rows where second col is not a number > 0
+function isDataRow(r) {
+    if (!r[0]) return false;
+    const val = parseFloat(r[1]);
+    return !isNaN(val);
+}
+
 // ─────────────────────────────────────────────
 // 1. GA4 LLM TRAFFIC
 // ─────────────────────────────────────────────
 async function loadTraffic() {
     const rows = await fetchCSV(SHEETS.traffic);
-    const data = rows.slice(1).filter(r => r[0] && r[1]);
-    const labels = data.map(r => r[0]);
+    // Skip any row where col[1] is not numeric (header rows)
+    const data = rows.filter(r => isDataRow(r));
+    const labels = data.map(r => String(r[0]));
     const values = data.map(r => parseFloat(r[1]) || 0);
     const total = values.reduce((a,b) => a+b, 0);
 
@@ -575,7 +609,9 @@ async function loadTraffic() {
     setEl('kpi-total-sessions', total.toLocaleString());
     setEl('traffic-total-badge', `${total.toLocaleString()} Total Sessions`);
     if (data.length > 0) {
-        setEl('kpi-top-source', labels[0]);
+        // Clean up source name: take part before " / "
+        const topSource = labels[0].split(' / ')[0];
+        setEl('kpi-top-source', topSource);
         setEl('kpi-top-source-sessions', `${values[0].toLocaleString()} sessions`);
     }
 
@@ -618,17 +654,21 @@ async function loadTraffic() {
 // ─────────────────────────────────────────────
 async function loadTrend() {
     const rows = await fetchCSV(SHEETS.trend);
-    // Row 0 = month headers, Row 1 = "Session source / medium" header row, Row 2+ = data
-    const monthRow = rows[0];
-    const numMonths = monthRow.length - 1;
+    // Row 0 = month number headers, Row 1 = "Sessions" label row, Row 2+ = actual data
+    const numMonths = rows[0].length - 1;
     const labels = Array.from({length: numMonths}, (_,i) => `Month ${i+1}`);
-
-    const dataRows = rows.slice(2).filter(r => r[0] && r[0] !== 'Session source / medium');
+    // Skip rows that are headers (where col[0] is 'Nth month' or 'Session source / medium')
+    const dataRows = rows.filter(r => {
+        if (!r[0]) return false;
+        const s = String(r[0]).toLowerCase();
+        if (s.includes('nth month') || s.includes('session source')) return false;
+        return true;
+    });
 
     const datasets = dataRows.map((r, i) => {
         const values = r.slice(1).map(v => parseFloat(v) || 0);
         return {
-            label: r[0],
+            label: String(r[0]),
             data: values,
             borderColor: COLORS[i % COLORS.length],
             backgroundColor: hexToRgba(COLORS[i % COLORS.length], 0.08),
@@ -659,9 +699,15 @@ async function loadTrend() {
 // ─────────────────────────────────────────────
 async function loadTopPages() {
     const rows = await fetchCSV(SHEETS.topPages);
-    const data = rows.slice(1).filter(r => r[0] && r[1] && r[0] !== '(not set)');
+    // Filter: numeric second column, skip "(not set)" and header
+    const data = rows.filter(r => {
+        if (!r[0]) return false;
+        if (String(r[0]).toLowerCase().includes('landing page')) return false;
+        if (String(r[0]) === '(not set)') return false;
+        return !isNaN(parseFloat(r[1]));
+    });
     const top10 = data.slice(0, 10);
-    const labels = top10.map(r => shortLabel(r[0], 30));
+    const labels = top10.map(r => shortLabel(String(r[0]), 30));
     const values = top10.map(r => parseFloat(r[1]) || 0);
 
     setEl('kpi-top-page-sessions', values[0]?.toLocaleString() || '—');
@@ -689,7 +735,7 @@ async function loadTopPages() {
         }
     });
 
-    // Table (top 10)
+    // Table
     const tbody = document.querySelector('#pages-table tbody');
     top10.forEach((r, i) => {
         const tr = document.createElement('tr');
@@ -706,9 +752,14 @@ async function loadTopPages() {
 // ─────────────────────────────────────────────
 async function loadGSC() {
     const rows = await fetchCSV(SHEETS.gsc);
-    const data = rows.slice(1).filter(r => r[0] && r[1]);
+    // Filter out header row (where col[1] is 'Impressions' or not numeric)
+    const data = rows.filter(r => {
+        if (!r[0]) return false;
+        if (String(r[1]).toLowerCase() === 'impressions') return false;
+        return !isNaN(parseFloat(r[1]));
+    });
     const top10 = data.slice(0, 10);
-    const labels = top10.map(r => shortLabel(r[0].replace(/\n/g,' '), 40));
+    const labels = top10.map(r => shortLabel(String(r[0]).replace(/\n/g,' '), 40));
     const values = top10.map(r => parseFloat(r[1]) || 0);
 
     setEl('kpi-top-impressions', values[0]?.toLocaleString() || '—');
@@ -736,50 +787,77 @@ async function loadGSC() {
         }
     });
 
-    // Table
+    // Table — all queries
     const tbody = document.querySelector('#gsc-table tbody');
     data.forEach(r => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td class="name">${r[0].replace(/\n/g,' ')}</td>
+            <td class="name">${String(r[0]).replace(/\n/g,' ')}</td>
             <td class="num">${parseFloat(r[1]).toLocaleString()}</td>`;
         tbody.appendChild(tr);
     });
 }
 
 // ─────────────────────────────────────────────
-// 5. BRAND MENTIONS
+// 5. BRAND MENTIONS + CITED SOURCES
 // ─────────────────────────────────────────────
 async function loadBrands() {
     const rows = await fetchCSV(SHEETS.brands);
-    // Find the TOP 10 BRANDS section
-    const brandStart = rows.findIndex(r => r[0] && r[0].includes('TOP 10 BRANDS'));
-    const citedStart = rows.findIndex(r => r[0] && r[0].includes('All cited sources (url'));
-    const domainStart = rows.findIndex(r => r[0] && r[0].includes('All cited sources (domain'));
 
+    // Locate section boundaries
+    const brandStart  = rows.findIndex(r => String(r[0]).includes('TOP 10 BRANDS'));
+    const urlStart    = rows.findIndex(r => String(r[0]).includes('All cited sources (url'));
+    const domainStart = rows.findIndex(r => String(r[0]).includes('All cited sources (domain'));
+
+    // --- Brands list ---
     const brands = [];
     if (brandStart !== -1) {
-        const end = citedStart !== -1 ? citedStart : rows.length;
+        const end = urlStart !== -1 ? urlStart : rows.length;
         for (let i = brandStart + 1; i < end; i++) {
-            if (rows[i][0]) brands.push(rows[i][0]);
+            if (rows[i][0]) brands.push(String(rows[i][0]));
         }
     }
 
-    const container = document.getElementById('brand-mentions-list');
+    const brandContainer = document.getElementById('brand-mentions-list');
     if (brands.length === 0) {
-        container.innerHTML = '<div class="data-error">No brand mention data available.</div>';
-        return;
+        brandContainer.innerHTML = '<div class="data-error">No brand mention data available.</div>';
+    } else {
+        brands.forEach((b, i) => {
+            const clean = b.replace(/^\d+\s*-\s*/, '');
+            const div = document.createElement('div');
+            div.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-subtle);';
+            div.innerHTML = `
+                <span style="width:28px;height:28px;border-radius:50%;background:${COLORS[i%COLORS.length]};display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:700;flex-shrink:0;">${i+1}</span>
+                <span style="font-size:14px;font-weight:500;color:var(--text-dark);">${clean}</span>`;
+            brandContainer.appendChild(div);
+        });
     }
 
-    brands.forEach((b, i) => {
-        const clean = b.replace(/^\d+\s*-\s*/, '');
-        const div = document.createElement('div');
-        div.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-subtle);';
-        div.innerHTML = `
-            <span style="width:28px;height:28px;border-radius:50%;background:${COLORS[i%COLORS.length]};display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:700;flex-shrink:0;">${i+1}</span>
-            <span style="font-size:14px;font-weight:500;color:var(--text-dark);">${clean}</span>`;
-        container.appendChild(div);
-    });
+    // --- Cited domains list ---
+    const domains = [];
+    if (domainStart !== -1) {
+        for (let i = domainStart + 1; i < rows.length; i++) {
+            if (rows[i][0]) domains.push(String(rows[i][0]));
+        }
+    }
+
+    const domainContainer = document.getElementById('cited-sources-list');
+    if (domains.length === 0) {
+        domainContainer.innerHTML = '<div class="data-error">No cited source data available.</div>';
+    } else {
+        domains.forEach((d, i) => {
+            // Format: "3 - vietnamgroup.asia" → count + domain
+            const parts = d.match(/^(\d+)\s*-\s*(.+)$/);
+            const count = parts ? parts[1] : '1';
+            const domain = parts ? parts[2] : d;
+            const div = document.createElement('div');
+            div.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-subtle);';
+            div.innerHTML = `
+                <span style="width:28px;height:28px;border-radius:8px;background:var(--brand-red-light);display:flex;align-items:center;justify-content:center;color:var(--brand-navy);font-size:12px;font-weight:700;flex-shrink:0;">${count}x</span>
+                <span style="font-size:13px;font-weight:500;color:var(--text-dark);">${domain}</span>`;
+            domainContainer.appendChild(div);
+        });
+    }
 }
 
 // ─────────────────────────────────────────────
@@ -787,9 +865,9 @@ async function loadBrands() {
 // ─────────────────────────────────────────────
 async function loadLeads() {
     const rows = await fetchCSV(SHEETS.leads);
-    const data = rows.filter(r => r[0] && r[1]);
+    const data = rows.filter(r => r[0] && !isNaN(parseFloat(r[1])));
 
-    const labels = data.map(r => r[0].trim());
+    const labels = data.map(r => String(r[0]).trim());
     const values = data.map(r => parseFloat(r[1]) || 0);
     const max = Math.max(...values);
 
@@ -797,6 +875,14 @@ async function loadLeads() {
 
     setEl('kpi-leads', values[0]?.toLocaleString() || '—');
     setEl('kpi-mqls', `${values[1]?.toLocaleString() || '—'} MQLs`);
+
+    // Conversion rates
+    if (values[0] > 0) {
+        const mqlRate = ((values[1] / values[0]) * 100).toFixed(0);
+        const oppRate = ((values[3] / values[0]) * 100).toFixed(0);
+        setEl('mql-rate', mqlRate + '%');
+        setEl('opp-rate', oppRate + '%');
+    }
 
     const container = document.getElementById('funnel-wrap');
     labels.forEach((label, i) => {
@@ -818,10 +904,9 @@ async function loadLeads() {
 }
 
 // ─────────────────────────────────────────────
-// INIT — load all sheets in parallel
+// INIT
 // ─────────────────────────────────────────────
 async function init() {
-    // Set date
     const now = new Date();
     setEl('report-date', now.toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric', hour:'2-digit', minute:'2-digit'}) + ' SGT');
 
