@@ -513,14 +513,15 @@
 // CONFIG — Google Sheets published CSV URLs
 // ─────────────────────────────────────────────
 const BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTDleEbjq_HhTB3UxZc-Ef31p6PNPAzjBTciCR-vs_v5B1ef-5SEnqmQqitP0gnaqH0qonxAE17OTJH/pub';
+const PROXY = 'https://corsproxy.io/?url=';
 
 const SHEETS = {
-    traffic:   `${BASE}?gid=0&single=true&output=csv`,
-    topPages:  `${BASE}?gid=1503988619&single=true&output=csv`,
-    trend:     `${BASE}?gid=967206910&single=true&output=csv`,
-    brands:    `${BASE}?gid=375342493&single=true&output=csv`,
-    gsc:       `${BASE}?gid=547121453&single=true&output=csv`,
-    leads:     `${BASE}?gid=2126968477&single=true&output=csv`,
+    traffic:   `${PROXY}${encodeURIComponent(BASE + '?gid=0&single=true&output=csv')}`,
+    topPages:  `${PROXY}${encodeURIComponent(BASE + '?gid=1503988619&single=true&output=csv')}`,
+    trend:     `${PROXY}${encodeURIComponent(BASE + '?gid=967206910&single=true&output=csv')}`,
+    brands:    `${PROXY}${encodeURIComponent(BASE + '?gid=375342493&single=true&output=csv')}`,
+    gsc:       `${PROXY}${encodeURIComponent(BASE + '?gid=547121453&single=true&output=csv')}`,
+    leads:     `${PROXY}${encodeURIComponent(BASE + '?gid=2126968477&single=true&output=csv')}`,
 };
 
 // ─────────────────────────────────────────────
